@@ -1,0 +1,45 @@
+-- ex1:
+SELECT Name
+FROM STUDENTS
+WHERE Marks > 75
+ORDER BY  RIGHT(Name,3), ID ASC 
+-- ex2:
+SELECT CONCAT(UPPER(LEFT(user_id,1)), LOWER(RIGHT(user_id,LENGTH(user_id)-1))) AS name
+FROM Users
+-- ex3:
+SELECT manufacturer, 
+  '$' || ROUND(SUM(total_sales)/1000000,0) || ' ' || 'millions' AS sale
+FROM pharmacy_sales
+GROUP BY manufacturer
+ORDER BY '$' || ROUND(SUM(total_sales)/1000000,0) || ' ' || 'millions' DESC;
+-- ex4:
+SELECT EXTRACT(month FROM submit_date) AS mth,
+product_id,
+ROUND(AVG(stars),2) AS avg_stars
+FROM reviews
+GROUP BY mth, product_id;
+-- ex5:
+SELECT sender_id,
+COUNT(message_id) AS message_count
+FROM messages
+WHERE EXTRACT(MONTH FROM sent_date) = 08 
+AND EXTRACT(YEAR FROM sent_date) = 2022
+GROUP BY sender_id
+ORDER BY message_count DESC;
+-- ex6:
+SELECT tweet_id
+FROM Tweets
+WHERE LENGTH(content) > 15
+-- ex8:
+SELECT COUNT(id) AS number_of_employees 
+FROM employees
+WHERE EXTRACT(month FROM joining_date) BETWEEN 1 AND 7
+AND EXTRACT(year FROM joining_date ) = 2022
+-- ex9:
+SELECT 
+POSITION('a' IN first_name) AS position
+FROM worker
+WHERE first_name= 'Amitah';
+-- ex10:
+select substring(title, length(winery)+2,4) from winemag_p2
+where country= 'Macedonia';
