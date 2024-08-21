@@ -1,0 +1,101 @@
+-- ex1:
+WITH count_job AS (
+SELECT company_id, title,
+description, COUNT(company_id) AS count_job
+FROM job_listings 
+GROUP BY company_id, title,
+description )
+SELECT COUNT(DISTINCT company_id) AS duplicate_companies
+FROM count_job
+WHERE count_job > 1
+-- ex3:
+WITH call_count AS (SELECT
+  policy_holder_id,
+  COUNT(case_id) AS call_count
+FROM callers
+GROUP BY policy_holder_id
+HAVING COUNT(case_id) >=3) 
+SELECT COUNT(policy_holder_id) AS policy_holder_count
+FROM call_count
+-- ex4:
+SELECT a.page_id FROM pages AS a  
+LEFT JOIN page_likes AS b 
+ON a.page_id = b.page_id
+WHERE b.page_id IS NULL
+ORDER BY a.page_id ASC
+-- ex5:
+SELECT EXTRACT(MONTH FROM event_date) AS month,
+COUNT(DISTINCT user_id) AS monthly_active_users
+FROM user_actions
+WHERE user_id IN (SELECT DISTINCT user_id 
+FROM user_actions 
+WHERE EXTRACT(MONTH FROM event_date) = 6) AND 
+EXTRACT(MONTH FROM event_date) = 7 
+GROUP BY EXTRACT(MONTH FROM event_date)
+-- ex6:
+SELECT LEFT(trans_date,7) AS month,
+country,
+COUNT(*) trans_count,
+SUM(CASE WHEN state='approved' THEN 1 ELSSE 0 END) AS approved_count,
+SUM(amount) AS trans_total_amount,
+SUM(CASE WHEN state='approved' THEN  AMOUNT ELSE 0 END) approved_total_amount 
+FROM Transactions 
+GROUP BY LEFT(trans_date,7), country;
+-- ex7:
+WITH year AS(SELECT product_id, 
+MIN(year) as first_year
+FROM Sales
+GROUP BY product_id)
+SELECT a.product_id, b.first_year,a.quantity, a.price
+FROM Sales AS a
+INNER JOIN year AS b
+ON a.product_id = b.product_id
+WHERE a.year = b.first_year
+-- ex8:
+SELECT customer_id
+FROM Customer
+GROUP BY customer_id
+HAVING COUNT(DISTINCT product_key) = (SELECT COUNT( product_key)
+FROM Product)
+-- ex9
+select mng.employee_id
+from Employees as emp
+left join Employees as mng
+on emp.manager_id = mng.employee_id
+WHERE emp.salary < 30000 and mng.manager_id is not null
+-- ex10
+WITH count_job AS (
+SELECT company_id, title,
+description, COUNT(company_id) AS count_job
+FROM job_listings 
+GROUP BY company_id, title,
+description )
+SELECT COUNT(DISTINCT company_id) AS duplicate_companies
+FROM count_job
+WHERE count_job > 1
+-- ex11
+(SELECT a.name AS results
+FROM Users AS a
+JOIN MovieRating AS b
+ON a.user_id = b.user_id
+GROUP BY a.name
+ORDER BY count(*) DESC, a.name ASC
+LIMIT 1)
+UNION 
+(SELECT c.title AS results
+FROM Movies AS c
+JOIN MovieRating AS b
+ON C.movie_id = b.movie_id
+WHERE b.created_at BETWEEN '2020-02-01' AND '2020-02-29'
+GROUP BY c.title
+ORDER BY AVG(rating) DESC, c.title ASC
+LIMIT 1)
+-- ex12
+WITH request AS (SELECT requester_id AS id FROM RequestAccepted
+UNION ALL
+SELECT accepter_id AS id FROM RequestAccepted)
+SELECT id, count(*) AS num  
+FROM request 
+GROUP BY id
+ORDER BY count(*) DESC
+LIMIT 1
