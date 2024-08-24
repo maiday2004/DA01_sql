@@ -1,0 +1,76 @@
+-- ex1:
+WITH twt_yearly_spend AS (
+SELECT EXTRACT(year FROM transaction_date) AS year,
+product_id, 
+spend as curr_year_spend,
+LAG(spend) OVER(PARTITION BY product_id ORDER BY product_id, EXTRACT(year FROM transaction_date)) AS prev_year_spend
+FROM user_transactions )
+SELECT year, product_id, curr_year_spend,
+prev_year_spend,
+ROUND(((curr_year_spend - prev_year_spend)/(prev_year_spend))*100,2) as yoy_rate
+FROM twt_yearly_spend
+-- ex2:
+SELECT DISTINCT
+  card_name,
+  FIRST_VALUE(issued_amount) OVER(PARTITION BY card_name ORDER BY issue_year, issue_month)
+  AS issued_amount
+FROM monthly_cards_issued
+ORDER BY issued_amount DESC
+-- ex3:
+WITH trans_num AS(
+SELECT user_id,
+transaction_date,
+spend, 
+ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY transaction_date) AS row_num
+FROM transactions)
+SELECT user_id, 
+transaction_date,
+spend
+FROM trans_num
+WHERE row_num = 3
+-- ex4:
+WITH twt_lastest_trans as (SELECT user_id, transaction_date,
+product_id,
+RANK() OVER(PARTITION BY user_id ORDER BY transaction_date DESC) AS stt
+FROM user_transactions )
+SELECT transaction_date, user_id,
+COUNT(product_id) AS purchase_count
+FROM twt_lastest_trans
+WHERE stt = 1
+GROUP BY transaction_date, user_id
+ORDER BY transaction_date
+-- ex6:
+WITH twt_time AS (SELECT transaction_id, 
+merchant_id, credit_card_id, amount,
+transaction_timestamp,
+LAG(transaction_timestamp) OVER(PARTITION BY merchant_id, credit_card_id, amount)
+AS previous_transaction_timestamp,
+EXTRACT(minutes FROM (transaction_timestamp - LAG(transaction_timestamp) OVER(PARTITION BY merchant_id, credit_card_id, amount)))
+AS distance_time
+FROM transactions)
+SELECT COUNT(merchant_id) as payment_count
+FROM twt_time
+WHERE distance_time < 10
+-- ex7:
+WITH rank_spend AS (SELECT category, product,
+SUM(spend) AS total_spend,
+RANK() OVER(PARTITION BY category ORDER BY SUM(spend) DESC) AS rank
+FROM product_spend 
+WHERE EXTRACT(YEAR FROM transaction_date) = 2022
+GROUP BY category, product)
+SELECT category, product, total_spend
+FROM rank_spend
+WHERE rank <=2 
+ORDER BY category, rank
+-- ex8:
+WITH twt_artist_rank AS (SELECT a.artist_name,
+DENSE_RANK() OVER(ORDER BY COUNT(b.song_id) DESC)
+AS artist_rank 
+FROM artists AS a  
+JOIN songs AS b ON a.artist_id = b.artist_id
+JOIN global_song_rank AS c ON c.song_id = b.song_id
+WHERE c.rank <=10
+GROUP BY a.artist_name)
+SELECT artist_name, artist_rank
+FROM twt_artist_rank
+WHERE artist_rank <=5
