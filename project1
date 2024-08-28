@@ -1,0 +1,89 @@
+--- bài 1:
+ALTER TABLE sales_dataset_rfm_prj 
+ALTER COLUMN ordernumber TYPE integer USING (ordernumber::integer);
+ALTER TABLE sales_dataset_rfm_prj 
+ALTER COLUMN priceeach TYPE numeric USING (priceeach::numeric),
+ALTER COLUMN orderdate TYPE date USING (orderdate::date),
+ALTER COLUMN sales TYPE numeric USING (sales::numeric),
+ALTER COLUMN status TYPE text USING (status::text),
+ALTER COLUMN productline TYPE text USING (productline::text),
+ALTER COLUMN customername TYPE text USING (customername::text),
+ALTER COLUMN addressline1 TYPE text USING (addressline1::text),
+ALTER COLUMN addressline2 TYPE text USING (addressline2::text),
+ALTER COLUMN city TYPE text USING (city::text),
+ALTER COLUMN country TYPE text USING (country::text),
+ALTER COLUMN quantityordered TYPE integer USING (quantityordered::integer),
+ALTER COLUMN orderlinenumber TYPE integer USING (orderlinenumber::integer),
+ALTER COLUMN msrp TYPE numeric USING (msrp::numeric),
+ALTER COLUMN contactfullname TYPE text USING (contactfullname::text);
+--- bài 2:
+SELECT *
+FROM sales_dataset_rfm_prj
+WHERE ordernumber IS NULL OR priceeach IS NULL 
+OR quantityordered IS NULL OR orderlinenumber IS NULL
+OR sales IS NULL OR orderdate IS NULL;
+--- bài 3:
+ALTER TABLE sales_dataset_rfm_prj
+ADD column contactfirstname 
+VARCHAR(20); 
+UPDATE sales_dataset_rfm_prj
+SET contactfirstname = 
+UPPER(LEFT(LEFT(contactfullname,POSITION('-' IN contactfullname)-1),1)) || 
+RIGHT(LEFT(contactfullname,POSITION('-' IN contactfullname)-1),(LENGTH(LEFT(contactfullname,POSITION('-' IN contactfullname)-1))-1))
+select * from sales_dataset_rfm_prj;
+ALTER TABLE sales_dataset_rfm_prj
+ADD column contactlastname 
+VARCHAR(20); 
+UPDATE sales_dataset_rfm_prj
+SET contactlastname = 
+UPPER(LEFT(RIGHT(contactfullname, LENGTH(contactfullname) - POSITION('-' in contactfullname )),1)) ||
+RIGHT(RIGHT(contactfullname, LENGTH(contactfullname) - POSITION('-' in contactfullname )),
+LENGTH(contactfullname) - POSITION('-' in contactfullname )-
+LENGTH(UPPER(LEFT(RIGHT(contactfullname, LENGTH(contactfullname) - POSITION('-' in contactfullname )),1))));
+--- bài 4:
+ALTER TABLE sales_dataset_rfm_prj
+ADD column month_id
+numeric;
+UPDATE sales_dataset_rfm_prj
+SET month_id=
+EXTRACT(MONTH FROM orderdate);
+ALTER TABLE sales_dataset_rfm_prj
+ADD column qrt_id
+numeric;
+UPDATE sales_dataset_rfm_prj
+SET qrt_id=
+EXTRACT(QUARTER FROM orderdate);
+ALTER TABLE sales_dataset_rfm_prj
+ADD column year_id
+numeric;
+--- bài 5: 
+--- cách 1
+WITH twt_min_max_value AS (SELECT Q1-1.5*IQR AS min_value, 
+Q3+1.5*IQR AS max_value
+FROM (
+SELECT 
+percentile_cont(0.25) WITHIN GROUP(ORDER BY quantityordered) AS Q1,
+percentile_cont(0.5) WITHIN GROUP(ORDER BY quantityordered) AS Q2,
+percentile_cont(0.75) WITHIN GROUP(ORDER BY quantityordered) AS Q3,
+percentile_cont(0.75) WITHIN GROUP(ORDER BY quantityordered) - 
+percentile_cont(0.25) WITHIN GROUP(ORDER BY quantityordered) AS IQR
+FROM sales_dataset_rfm_prj) as a)
+select * from sales_dataset_rfm_prj 
+WHERE quantityordered < (select min_value from twt_min_max_value )
+OR quantityordered > (select max_value from twt_min_max_value);
+--- cách 2
+select avg(quantityordered),
+stddev(quantityordered)
+from sales_dataset_rfm_prj;
+WITH CTE as (SELECT orderdate,
+quantityordered, 
+(select avg(quantityordered) from sales_dataset_rfm_prj ) as avg,
+(select stddev(quantityordered) from sales_dataset_rfm_prj) as stddev
+from sales_dataset_rfm_prj)
+select orderdate, quantityordered,
+avg, stddev,
+(quantityordered- avg)/stddev as z_score
+from CTE
+WHERE abs((quantityordered- avg)/stddev) > 3
+select * from sales_dataset_rfm_prj
+
