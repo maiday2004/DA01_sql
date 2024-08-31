@@ -1,0 +1,29 @@
+--- BÀI 1
+SELECT  FORMAT_DATE('%Y-%m', created_at) AS month_year,
+COUNT(user_id) AS total_user,
+COUNT(order_id) AS total_order
+FROM bigquery-public-data.thelook_ecommerce.orders
+WHERE created_at BETWEEN '2019-01-01' AND '2022-04-30'
+GROUP BY FORMAT_DATE('%Y-%m', created_at)
+ORDER BY month_year
+--- BÀI 2
+SELECT FORMAT_DATE('%Y-%m', a.created_at) AS month_year,
+COUNT(DISTINCT a.user_id) AS distinct_users,
+SUM(b.sale_price)/COUNT(a.order_id) AS average_order_value
+FROM bigquery-public-data.thelook_ecommerce.orders AS a
+JOIN bigquery-public-data.thelook_ecommerce.order_items AS b
+ON a.order_id = b.order_id
+WHERE a.created_at BETWEEN '2019-01-01' AND '2022-04-30'
+GROUP BY FORMAT_DATE('%Y-%m', a.created_at)
+ORDER BY month_year
+--- BÀI 3
+with twt_youngest_users as (select first_name, last_name, gender, age, 'youngest' AS tag
+from bigquery-public-data.thelook_ecommerce.users
+where age = (select min(age) from bigquery-public-data.thelook_ecommerce.users )
+ORDER BY gender),
+twt_oldest_users as (select first_name, last_name, gender, age, 'oldest' as tag
+from bigquery-public-data.thelook_ecommerce.users
+where age = (select max(age) from bigquery-public-data.thelook_ecommerce.users)
+ORDER BY gender)
+SELECT * FROM twt_youngest_users 
+--- BÀI 4
