@@ -1,0 +1,80 @@
+WITH order_items_convert AS (
+    SELECT 
+        id, 
+        order_id, 
+        user_id,
+        product_id, 
+        inventory_item_id,
+        created_at, 
+        sale_price
+    FROM 
+        `bigquery-public-data.thelook_ecommerce.order_items`
+    WHERE 
+        id IS NOT NULL 
+        AND order_id IS NOT NULL 
+        AND user_id IS NOT NULL
+        AND product_id IS NOT NULL 
+        AND inventory_item_id IS NOT NULL
+        AND sale_price > 0
+),
+order_items_main AS (
+    SELECT * FROM (
+        SELECT *,
+            ROW_NUMBER() OVER (PARTITION BY id, order_id, user_id, product_id, inventory_item_id ORDER BY created_at) AS STT
+        FROM 
+            order_items_convert
+    ) AS t
+    WHERE 
+        STT = 1
+        
+),
+order_items_index AS (
+    SELECT 
+        user_id, 
+        sale_price AS amount,
+        FORMAT_TIMESTAMP('%Y-%m', created_at) AS cohort_date,
+        created_at, 
+        DATE_DIFF(DATE(created_at), DATE(first_purchase_date), MONTH) + 1 as index
+    FROM (
+        SELECT 
+            user_id, 
+            sale_price, 
+            MIN(created_at) OVER (PARTITION BY user_id) AS first_purchase_date,
+            created_at
+        FROM 
+            order_items_main
+    ) a
+),
+xxx AS (
+    SELECT 
+        cohort_date,
+        index,
+        COUNT(user_id) AS cnt,
+        SUM(amount) AS revenue
+    FROM 
+        order_items_index
+    GROUP BY 
+        cohort_date, index
+), customer_cohort AS (SELECT 
+    cohort_date,
+    SUM(CASE WHEN index = 1 THEN cnt ELSE 0 END) AS m1,
+    SUM(CASE WHEN index = 2 THEN cnt ELSE 0 END) AS m2,
+    SUM(CASE WHEN index = 3 THEN cnt ELSE 0 END) AS m3,
+    SUM(CASE WHEN index = 4 THEN cnt ELSE 0 END) AS m4
+FROM 
+    xxx
+GROUP BY 
+    cohort_date),
+rentention_cohort AS (SELECT cohort_date, round(m1/m1*100,2) || '%' AS m1,
+round(m2/m1*100,2) || '%' AS m2,
+round(m3/m1*100,2) || '%' AS m3,
+round(m4/m1*100,2) || '%' AS m4
+FROM customer_cohort )
+SELECT cohort_date,
+(100-round(m1/m1*100,2)) || '%' AS m1,
+(100-round(m2/m1*100,2)) || '%' AS m2,
+(100-round(m3/m1*100,2)) || '%' AS m3,
+(100-round(m4/m1*100,2)) || '%' AS m4
+FROM customer_cohort
+
+
