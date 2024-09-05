@@ -1,0 +1,48 @@
+SELECT year_id, productline,
+dealsize, SUM(sales) AS revenue
+FROM sales_dataset_rfm_prj
+GROUP BY year_id, productline,
+dealsize;
+with twt_monthly as (select 
+TO_CHAR(orderdate, 'YYYY-MM') AS month_id, year_id,
+count(ordernumber) AS order_number,
+sum(sales) as revenue
+from sales_dataset_rfm_prj
+group by TO_CHAR(orderdate, 'YYYY-MM'), year_id),
+twt_monthly_rank as (
+select month_id, revenue, order_number,
+RANK() OVER(PARTITION BY year_id ORDER BY revenue DESC)AS rank 
+from twt_monthly)
+select month_id, order_number,
+revenue
+from twt_monthly_rank
+where rank = 1;
+WITH twt_product AS (select month_id, productline,
+count(ordernumber) AS order_number,
+sum(sales) as revenue
+from sales_dataset_rfm_prj
+where month_id = 11
+group by month_id, productline)
+SELECT month_id, order_number, revenue
+from twt_product
+order by revenue desc
+limit 1;
+WITH TWT_country as (select year_id,
+productline, country, 
+sum(sales) as revenue
+from sales_dataset_rfm_prj
+where country = 'UK'
+group by year_id,
+productline, country),
+twt_rank as (select year_id, productline, revenue,
+ROW_NUMBER() OVER(PARTITION BY year_id ORDER BY revenue desc) as rank
+from TWT_country)
+select year_id, productline, revenue, rank
+from twt_rank
+where rank = 1;
+select *
+from sales_dataset_rfm_prj as a
+customer as b
+on a.
+select * from sales_dataset_rfm_prj
+
